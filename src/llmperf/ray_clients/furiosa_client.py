@@ -1,4 +1,4 @@
-
+import json
 import time
 from typing import Any, Dict
 
@@ -29,6 +29,7 @@ class FuriosaLLMClient(LLMClient):
         metrics[common_metrics.ERROR_CODE] = None
         metrics[common_metrics.ERROR_MSG] = ""
 
+        # FIXME: Change url
         url = "http://localhost:8000" + "/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         # TODO: Use model name from request_config
@@ -36,17 +37,19 @@ class FuriosaLLMClient(LLMClient):
 
         start_time = time.monotonic()
         try:
-            response = requests.post(url, headers=headers, data=data)
+            response = requests.post(url, headers=headers, data=json.dumps(data))
             total_request_time = time.monotonic() - start_time
             ttft = total_request_time
             response_code = response.status_code
-            
+
             response = response.json()
-            for choice in response['choices']:
-                generated_text += choice['message']['content']
-            tokens_received = response['usage']['completion_tokens']
+            for choice in response["choices"]:
+                generated_text += choice["message"]["content"]
+            tokens_received = response["usage"]["completion_tokens"]
             output_throughput = tokens_received / total_request_time
-            time_to_next_token = [total_request_time / tokens_received for _ in range(tokens_received)]
+            time_to_next_token = [
+                total_request_time / tokens_received for _ in range(tokens_received)
+            ]
 
         except Exception as e:
             metrics[common_metrics.ERROR_MSG] = str(e)
@@ -55,7 +58,9 @@ class FuriosaLLMClient(LLMClient):
             print(response_code)
             print(response_code)
 
-        metrics[common_metrics.INTER_TOKEN_LAT] = sum(time_to_next_token) #This should be same as metrics[common_metrics.E2E_LAT]. Leave it here for now
+        metrics[common_metrics.INTER_TOKEN_LAT] = sum(
+            time_to_next_token
+        )  # This should be same as metrics[common_metrics.E2E_LAT]. Leave it here for now
         metrics[common_metrics.TTFT] = ttft
         metrics[common_metrics.E2E_LAT] = total_request_time
         metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput

@@ -14,10 +14,10 @@ import ray
 from llmperf import common_metrics
 from llmperf.common import SUPPORTED_APIS, construct_clients
 
+from llmperf.datasets import randomly_sample_prompt
 from llmperf.models import RequestConfig
 from llmperf.requests_launcher import RequestsLauncher
 from llmperf.utils import (
-    randomly_sample_sonnet_lines_prompt,
     LLMPerfResults,
     sample_random_positive_int,
 )
@@ -25,8 +25,10 @@ from tqdm import tqdm
 
 from transformers import LlamaTokenizerFast
 
+
 def get_token_throughput_latencies(
     model: str,
+    dataset: str,
     mean_input_tokens: int,
     stddev_input_tokens: int,
     mean_output_tokens: int,
@@ -41,6 +43,7 @@ def get_token_throughput_latencies(
 
     Args:
         model: The name of the model to query.
+        dataset: The name of dataset for evaluation.
         mean_input_tokens: The mean number of tokens to send in the prompt for the request.
         stddev_input_tokens: The standard deviation of the number of tokens to send in the prompt for the request.
         mean_output_tokens: The mean number of tokens to generate per request.
@@ -63,7 +66,7 @@ def get_token_throughput_latencies(
         "hf-internal-testing/llama-tokenizer"
     )
     get_token_length = lambda text: len(tokenizer.encode(text))
-    
+
     if not additional_sampling_params:
         additional_sampling_params = {}
 
@@ -75,17 +78,20 @@ def get_token_throughput_latencies(
     num_output_tokens_list = []
     prompts = []
     for i in range(max_num_completed_requests):
-        num_output_tokens = (sample_random_positive_int(
+        num_output_tokens = sample_random_positive_int(
             mean_output_tokens, stddev_output_tokens
-        ))
+        )
         num_output_tokens_list.append(num_output_tokens)
 
-        prompts.append(randomly_sample_sonnet_lines_prompt(
-            prompt_tokens_mean=mean_input_tokens,
-            prompt_tokens_stddev=stddev_input_tokens,
-            expect_output_tokens=num_output_tokens,
-            tokenizer=tokenizer
-        ))
+        prompts.append(
+            randomly_sample_prompt(
+                dataset,
+                prompt_tokens_mean=mean_input_tokens,
+                prompt_tokens_stddev=stddev_input_tokens,
+                expect_output_tokens=num_output_tokens,
+                tokenizer=tokenizer,
+            )
+        )
     start_time = time.monotonic()
     iter = 0
     pbar = tqdm(total=max_num_completed_requests)
@@ -113,13 +119,17 @@ def get_token_throughput_latencies(
             for out in outs:
                 request_metrics, gen_text, _ = out
                 num_output_tokens = get_token_length(gen_text)
-                if num_output_tokens: 
+                if num_output_tokens:
                     request_metrics[common_metrics.INTER_TOKEN_LAT] /= num_output_tokens
                 else:
                     request_metrics[common_metrics.INTER_TOKEN_LAT] = 0
                 request_metrics[common_metrics.NUM_OUTPUT_TOKENS] = num_output_tokens
-                request_metrics[common_metrics.NUM_TOTAL_TOKENS] = request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
-                request_metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = num_output_tokens / request_metrics[common_metrics.E2E_LAT]
+                request_metrics[common_metrics.NUM_TOTAL_TOKENS] = (
+                    request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
+                )
+                request_metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = (
+                    num_output_tokens / request_metrics[common_metrics.E2E_LAT]
+                )
                 all_metrics.append(request_metrics)
             completed_requests.extend(all_metrics)
         pbar.update(len(completed_requests) - num_completed_requests)
@@ -136,22 +146,29 @@ def get_token_throughput_latencies(
     for out in outs:
         request_metrics, gen_text, _ = out
         num_output_tokens = get_token_length(gen_text)
-        if num_output_tokens: 
+        if num_output_tokens:
             request_metrics[common_metrics.INTER_TOKEN_LAT] /= num_output_tokens
         else:
             request_metrics[common_metrics.INTER_TOKEN_LAT] = 0
         request_metrics[common_metrics.NUM_OUTPUT_TOKENS] = num_output_tokens
-        request_metrics[common_metrics.NUM_TOTAL_TOKENS] = request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
-        request_metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = num_output_tokens / request_metrics[common_metrics.E2E_LAT]
-                
+        request_metrics[common_metrics.NUM_TOTAL_TOKENS] = (
+            request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
+        )
+        request_metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = (
+            num_output_tokens / request_metrics[common_metrics.E2E_LAT]
+        )
+
         all_metrics.append(request_metrics)
     completed_requests.extend(all_metrics)
 
-    print(f"\Results for token benchmark for {model} queried with the {llm_api} api.\n")
+    print(
+        f"\Results for token benchmark for {model} using {dataset} dataset queried with the {llm_api} api.\n"
+    )
     ret = metrics_summary(completed_requests, start_time, end_time)
 
     metadata = {
         "model": model,
+        "dataset": dataset,
         "mean_input_tokens": mean_input_tokens,
         "stddev_input_tokens": stddev_input_tokens,
         "mean_output_tokens": mean_output_tokens,
@@ -161,7 +178,7 @@ def get_token_throughput_latencies(
     }
 
     metadata["results"] = ret
-        
+
     return metadata, completed_requests
 
 
@@ -200,14 +217,14 @@ def metrics_summary(
 
     df = pd.DataFrame(metrics)
     df_without_errored_req = df[df[common_metrics.ERROR_CODE].isna()]
-    
+
     for key in [
         common_metrics.INTER_TOKEN_LAT,
         common_metrics.TTFT,
         common_metrics.E2E_LAT,
         common_metrics.REQ_OUTPUT_THROUGHPUT,
         common_metrics.NUM_INPUT_TOKENS,
-        common_metrics.NUM_OUTPUT_TOKENS
+        common_metrics.NUM_OUTPUT_TOKENS,
     ]:
         print(key)
         ret[key] = {}
@@ -259,13 +276,14 @@ def metrics_summary(
 
     ret[common_metrics.NUM_COMPLETED_REQUESTS] = num_completed_requests
     ret[common_metrics.COMPLETED_REQUESTS_PER_MIN] = num_completed_requests_per_min
-    
+
     return ret
 
 
 def run_token_benchmark(
     llm_api: str,
     model: str,
+    dataset: str,
     test_timeout_s: int,
     max_num_completed_requests: int,
     num_concurrent_requests: int,
@@ -281,6 +299,7 @@ def run_token_benchmark(
     Args:
         llm_api: The name of the llm api to use.
         model: The name of the model to query.
+        dataset: The name of dataset for evaluation.
         max_num_completed_requests: The number of requests to complete before finishing the test.
         test_timeout_s: The amount of time to run the test for before reporting results.
         num_concurrent_requests: The number of concurrent requests to make. Increase
@@ -302,6 +321,7 @@ def run_token_benchmark(
 
     summary, individual_responses = get_token_throughput_latencies(
         model=model,
+        dataset=dataset,
         llm_api=llm_api,
         test_timeout_s=test_timeout_s,
         max_num_completed_requests=max_num_completed_requests,
@@ -314,7 +334,7 @@ def run_token_benchmark(
     )
 
     if results_dir:
-        filename = f"{model}_{mean_input_tokens}_{mean_output_tokens}"
+        filename = f"{model}_{dataset}_{mean_input_tokens}_{mean_output_tokens}"
         filename = re.sub(r"[^\w\d-]+", "-", filename)
         filename = re.sub(r"-{2,}", "-", filename)
         summary_filename = f"{filename}_summary"
@@ -351,6 +371,12 @@ args = argparse.ArgumentParser(
 
 args.add_argument(
     "--model", type=str, required=True, help="The model to use for this load test."
+)
+args.add_argument(
+    "--dataset",
+    type=str,
+    default="sonnet",
+    help=("The dataset for evaluation. " "(default: %(default)s)"),
 )
 args.add_argument(
     "--mean-input-tokens",
@@ -462,6 +488,7 @@ if __name__ == "__main__":
     run_token_benchmark(
         llm_api=args.llm_api,
         model=args.model,
+        dataset=args.dataset,
         test_timeout_s=args.timeout,
         max_num_completed_requests=args.max_num_completed_requests,
         mean_input_tokens=args.mean_input_tokens,
