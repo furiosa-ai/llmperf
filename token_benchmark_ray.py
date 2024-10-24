@@ -162,7 +162,7 @@ def get_token_throughput_latencies(
     completed_requests.extend(all_metrics)
 
     print(
-        f"\Results for token benchmark for '{model}' using '{dataset}' dataset queried with the '{llm_api}' api.\n"
+        f"Results for token benchmark for '{model}' using '{dataset}' dataset queried with the '{llm_api}' api.\n"
     )
     ret = metrics_summary(completed_requests, end_time - start_time)
 
@@ -182,9 +182,7 @@ def get_token_throughput_latencies(
     return metadata, completed_requests
 
 
-def metrics_summary(
-    metrics: List[Dict[str, Any]], e2e_latency: int
-) -> Dict[str, Any]:
+def metrics_summary(metrics: List[Dict[str, Any]], e2e_latency: int) -> Dict[str, Any]:
     """Generate a summary over metrics generated from potentially multiple instances of this client.
 
     Args:
@@ -261,17 +259,15 @@ def metrics_summary(
         print(error_code_frequency)
     ret[common_metrics.ERROR_CODE_FREQ] = str(error_code_frequency)
 
-    overall_output_throughput = df_without_errored_req[
-        common_metrics.NUM_OUTPUT_TOKENS
-    ].sum() / e2e_latency
+    overall_output_throughput = (
+        df_without_errored_req[common_metrics.NUM_OUTPUT_TOKENS].sum() / e2e_latency
+    )
 
     print(f"Overall Output Throughput: {overall_output_throughput}")
     ret[common_metrics.OUTPUT_THROUGHPUT] = overall_output_throughput
 
     num_completed_requests = len(df_without_errored_req)
-    num_completed_requests_per_min = (
-        num_completed_requests / e2e_latency * 60
-    )
+    num_completed_requests_per_min = num_completed_requests / e2e_latency * 60
     print(f"Number Of Completed Requests: {num_completed_requests}")
     print(f"Completed Requests Per Minute: {num_completed_requests_per_min}")
 
