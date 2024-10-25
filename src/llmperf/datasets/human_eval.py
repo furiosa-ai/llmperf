@@ -12,6 +12,9 @@ def randomly_sample_human_eval_prompt(
     expect_output_tokens: int = 150,
     tokenizer=AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct"),
 ) -> Tuple[str, int]:
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     get_token_length = lambda text: len(tokenizer.encode(text))
 
     # Leave the prompt empty for now
@@ -32,4 +35,13 @@ def randomly_sample_human_eval_prompt(
     while remaining_prompt_tokens < get_token_length(problems[task_id]["prompt"]):
         task_id = random.choice(task_ids)
     prompt += problems[task_id]["prompt"]
-    return [prompt, get_token_length(prompt)]
+    remaining_prompt_tokens -= get_token_length(prompt)
+
+    # padding
+    pad_token_num = 0
+    while remaining_prompt_tokens > 0:
+        pad_token_num += 1
+        remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
+    prompt += tokenizer.pad_token * (pad_token_num - 1)
+
+    return [prompt, num_prompt_tokens]
