@@ -17,8 +17,8 @@ def randomly_sample_human_eval_prompt(
 
     get_token_length = lambda text: len(tokenizer.encode(text))
 
-    # Leave the prompt empty for now
-    prompt = ""
+    # Instruction from AA's sample code
+    prompt = "Read the following function signature and docstring, and fully implement the function described. Your response should only contain the code for this function.\n"
 
     # FIXME: How should we control input/output prompt length about human_eval dataset?
     num_prompt_tokens = sample_random_positive_int(
@@ -35,13 +35,13 @@ def randomly_sample_human_eval_prompt(
     while remaining_prompt_tokens < get_token_length(problems[task_id]["prompt"]):
         task_id = random.choice(task_ids)
     prompt += problems[task_id]["prompt"]
-    remaining_prompt_tokens -= get_token_length(prompt)
 
     # padding
-    pad_token_num = 0
-    while remaining_prompt_tokens > 0:
-        pad_token_num += 1
-        remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
-    prompt += tokenizer.pad_token * (pad_token_num - 1)
+    # remaining_prompt_tokens -= get_token_length(prompt)
+    # pad_token_num = 0
+    # while remaining_prompt_tokens > 0:
+    #     pad_token_num += 1
+    #     remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
+    # prompt += tokenizer.pad_token * (pad_token_num - 1)
 
-    return [prompt, num_prompt_tokens]
+    return [prompt, get_token_length(prompt)]

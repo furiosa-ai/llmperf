@@ -8,16 +8,16 @@ import sys
 
 from llmperf.utils import sample_random_positive_int
 
-QUERY_TEMPLATE = """What is the correct answer to this question:
+QUERY_TEMPLATE_MULTICHOICE = """
+Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.
+
 {Question}
 
-Choices:
-(A) {A}
-(B) {B}
-(C) {C}
-(D) {D}
-
-Answer: """
+A) {A}
+B) {B}
+C) {C}
+D) {D}
+""".strip()
 
 
 def clean_text(text) -> str:
@@ -44,21 +44,22 @@ def randomly_sample_gpqa_prompt(
     min_prompt_length = sys.maxint
     gpqa_main = csv.DictReader(open("gpqa_main.csv"))
     for doc in gpqa_main:
+        # copy permutation code from AA's sample code
         choices = [
-            clean_text(doc["Correct Answer"]),
-            clean_text(doc["Incorrect Answer 1"]),
-            clean_text(doc["Incorrect Answer 2"]),
-            clean_text(doc["Incorrect Answer 3"]),
+            doc["Correct Answer"],
+            doc["Incorrect Answer 1"],
+            doc["Incorrect Answer 2"],
+            doc["Incorrect Answer 3"],
         ]
-        random.shuffle(choices)
+        choices = [choices[i] for i in doc["permutation"]]
         choices_dict = dict(
             A=choices[0],
             B=choices[1],
             C=choices[2],
             D=choices[3],
-            Question=clean_text(doc["Question"]),  # Added preprocess here
+            Question=doc["Question"],  # Added preprocess here
         )
-        prompt = QUERY_TEMPLATE.format(**choices_dict)
+        prompt = QUERY_TEMPLATE_MULTICHOICE.format(**choices_dict)
         prompts.append(prompt)
 
         if get_token_length(prompt) < min_prompt_length:
@@ -75,13 +76,13 @@ def randomly_sample_gpqa_prompt(
     prompt = random.choice(prompts)
     while num_prompt_tokens < get_token_length(prompt):
         prompt = random.choice(prompts)
-    remaining_prompt_tokens = num_prompt_tokens - get_token_length(prompt)
 
     # padding
-    pad_token_num = 0
-    while remaining_prompt_tokens > 0:
-        pad_token_num += 1
-        remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
-    prompt += tokenizer.pad_token * (pad_token_num - 1)
+    # pad_token_num = 0
+    # remaining_prompt_tokens = num_prompt_tokens - get_token_length(prompt)
+    # while remaining_prompt_tokens > 0:
+    #     pad_token_num += 1
+    #     remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
+    # prompt += tokenizer.pad_token * (pad_token_num - 1)
 
-    return [prompt, num_prompt_tokens]
+    return [prompt, get_token_length(prompt)]
