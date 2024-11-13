@@ -87,7 +87,7 @@ def get_prompt_1000(tokenizer):
     target_sentence_prompt = ""
     num_actual_input_sentences = 0
     while num_actual_input_sentences < max_num_input_sentences:
-        this = f"{num_actual_input_sentences}. {selected_sentences[num_actual_input_sentences]}\n"
+        this = f"{num_actual_input_sentences + 1}. {selected_sentences[num_actual_input_sentences]}\n"
         if (
             len(tokenizer.encode(target_sentence_prompt + this))
             > max_target_sentence_prompt_tokens
