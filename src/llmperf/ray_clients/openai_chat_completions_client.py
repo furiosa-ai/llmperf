@@ -82,9 +82,13 @@ class OpenAIChatCompletionsClient(LLMClient):
                         continue
                     stem = "data: "
                     chunk = chunk[len(stem) :]
-                    if chunk == b"[DONE]":
-                        continue
                     tokens_received += 1
+                    if chunk == b"[DONE]":
+                        # Include "[DONE]" token as output
+                        time_to_next_token.append(
+                            time.monotonic() - most_recent_received_token_time
+                        )
+                        continue
                     data = json.loads(chunk)
 
                     if "error" in data:
@@ -113,9 +117,8 @@ class OpenAIChatCompletionsClient(LLMClient):
             print(f"Warning Or Error: {e}")
             print(error_response_code)
 
-        metrics[common_metrics.INTER_TOKEN_LAT] = sum(
-            time_to_next_token
-        )  # This should be same as metrics[common_metrics.E2E_LAT]. Leave it here for now
+        # Exclude ttft
+        metrics[common_metrics.INTER_TOKEN_LAT] = time_to_next_token[1:]
         metrics[common_metrics.TTFT] = ttft
         metrics[common_metrics.E2E_LAT] = total_request_time
         metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
