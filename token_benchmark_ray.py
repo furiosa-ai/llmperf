@@ -75,7 +75,7 @@ def get_token_throughput_latencies(
     random.seed(11111)
 
     # Use same tokenizer with furiosa-llm serve
-    tokenizer = PreTrainedTokenizerFast.from_pretrained("meta-llama/Meta-Llama-3.1-70B-Instruct")
+    tokenizer = PreTrainedTokenizerFast.from_pretrained(model)
     
     if not additional_sampling_params:
         additional_sampling_params = {}
