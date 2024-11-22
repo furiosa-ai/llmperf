@@ -1,5 +1,8 @@
+import math
 import random
 from typing import Tuple, Callable
+
+from llmperf.utils import sample_random_positive_int
 
 
 def randomly_sample_translation_prompt(
@@ -8,11 +11,14 @@ def randomly_sample_translation_prompt(
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
 ) -> Tuple[str, int]:
-    # XXX: use this overly simplified condition for now
-    if prompt_tokens_mean < 400:
+    num_prompt_tokens = sample_random_positive_int(
+        prompt_tokens_mean, prompt_tokens_stddev
+    )
+    num_prompt_tokens = max(num_prompt_tokens, 100)
+    if num_prompt_tokens <= 150:
         prompt = get_prompt_100()
     else:
-        prompt = get_prompt_1000(get_token_len)
+        prompt = get_prompt_long(num_prompt_tokens, expect_output_tokens, get_token_len)
 
     return [prompt, get_token_len(prompt)]
 
@@ -32,7 +38,7 @@ def get_prompt_100():
     return out
 
 
-def get_prompt_1000(get_token_len):
+def get_prompt_long(target_input_tokens, target_output_tokens, get_token_len):
     """
     Example:
 
@@ -69,33 +75,46 @@ def get_prompt_1000(get_token_len):
     """
 
     selected_lang = random.choice(TARGET_LANG)
-
-    max_num_input_sentences = 30
-    max_num_output_sentences = 20
-
-    # render target sentences
-    selected_sentences = random.sample(TARGET_LONG_SENTENCES, max_num_input_sentences)
-    max_target_sentence_prompt_tokens = 800  # magic number
-
-    target_sentence_prompt = ""
-    num_actual_input_sentences = 0
-    while num_actual_input_sentences < max_num_input_sentences:
-        this = f"{num_actual_input_sentences + 1}. {selected_sentences[num_actual_input_sentences]}\n"
-        if (
-            get_token_len(target_sentence_prompt + this)
-            > max_target_sentence_prompt_tokens
-        ):
-            break
-        target_sentence_prompt += this
-        num_actual_input_sentences += 1
-
-    num_output_sentences = min(max_num_output_sentences, num_actual_input_sentences)
-    selected_outout_sentence_indices = sorted(
-        random.sample(range(1, num_actual_input_sentences + 1), num_output_sentences)
+    header = f"Below is a list of sentences. I'd like you to translate a few of them into {selected_lang} please:\n\n"
+    header_tokens = get_token_len(header)
+    footer_tokens_approx = get_token_len(
+        "Please translate the following numbered sentences into French:"
+    ) + get_token_len(
+        " Don't repeat the sentences in English. Only translate those 20 sentences. Number them in your response. Thank you!"
+    )
+    additional_tokens_per_sentence_approx = (
+        get_token_len("10. ") + get_token_len("\n") + get_token_len(" 10,")
     )
 
-    prompt = f"Below is a list of sentences. I'd like you to translate a few of them into {selected_lang} please:\n\n"
-    prompt += target_sentence_prompt
+    tokens_approx = header_tokens + footer_tokens_approx
+    if tokens_approx >= target_input_tokens:
+        raise ValueError(
+            "the prompt exceeds its length with just the header and footer; increase target_input_tokens"
+        )
+
+    selected_sentences = []
+    while tokens_approx < target_input_tokens:
+        selected_sentence = random.choice(TARGET_LONG_SENTENCES)
+        tokens_approx += (
+            get_token_len(selected_sentence) + additional_tokens_per_sentence_approx
+        )
+        if tokens_approx < target_input_tokens:
+            selected_sentences.append(selected_sentence)
+        else:
+            break
+
+    sentence_num_tokens_avg = sum(
+        [get_token_len(sentence) for sentence in selected_sentences]
+    ) / len(selected_sentences)
+    num_output_sentences = math.ceil(target_output_tokens / sentence_num_tokens_avg)
+    num_output_sentences = min(num_output_sentences, len(selected_sentences))
+    selected_outout_sentence_indices = sorted(
+        random.sample(range(1, len(selected_sentences) + 1), num_output_sentences)
+    )
+
+    prompt = header
+    for i, sentence in enumerate(selected_sentences, 1):
+        prompt += f"{i}. {sentence}\n"
     prompt += (
         f"\nPlease translate the following numbered sentences into {selected_lang}: "
         + ", ".join([str(i) for i in selected_outout_sentence_indices])
