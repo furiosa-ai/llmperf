@@ -74,52 +74,45 @@ def get_prompt_long(target_input_tokens, target_output_tokens, get_token_len):
     Please translate the following numbered sentences into French: 1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 24, 25, 26. Don't repeat the sentences in English. Only translate those 20 sentences. Number them in your response. Thank you!
     """
 
+    # select target language
     selected_lang = random.choice(TARGET_LANG)
-    header = f"Below is a list of sentences. I'd like you to translate a few of them into {selected_lang} please:\n\n"
-    header_tokens = get_token_len(header)
-    footer_tokens_approx = get_token_len(
-        "Please translate the following numbered sentences into French:"
-    ) + get_token_len(
-        " Don't repeat the sentences in English. Only translate those 20 sentences. Number them in your response. Thank you!"
-    )
-    additional_tokens_per_sentence_approx = (
-        get_token_len("10. ") + get_token_len("\n") + get_token_len(" 10,")
-    )
 
-    tokens_approx = header_tokens + footer_tokens_approx
-    if tokens_approx >= target_input_tokens:
-        raise ValueError(
-            "the prompt exceeds its length with just the header and footer; increase target_input_tokens"
+    # approx num_output_sentences
+    sentence_num_tokens_avg = sum(
+        [get_token_len(sentence) for sentence in TARGET_LONG_SENTENCES]
+    ) / len(TARGET_LONG_SENTENCES)
+    num_output_sentences = math.ceil(target_output_tokens / sentence_num_tokens_avg)
+
+    def render_prompt(selected_sentences):
+        prompt = f"Below is a list of sentences. I'd like you to translate a few of them into {selected_lang} please:\n\n"
+        for i, sentence in enumerate(selected_sentences, 1):
+            prompt += f"{i}. {sentence}\n"
+        selected_outout_sentence_indices = sorted(
+            random.sample(
+                range(1, len(selected_sentences) + 1),
+                min(num_output_sentences, len(selected_sentences)),
+            )
         )
+        prompt += (
+            f"\nPlease translate the following numbered sentences into {selected_lang}: "
+            + ", ".join([str(i) for i in selected_outout_sentence_indices])
+            + f". Don't repeat the sentences in English. Only translate those {num_output_sentences} sentences. Number them in your response. Thank you!"
+        )
+        return prompt
 
     selected_sentences = []
-    while tokens_approx < target_input_tokens:
-        selected_sentence = random.choice(TARGET_LONG_SENTENCES)
-        tokens_approx += (
-            get_token_len(selected_sentence) + additional_tokens_per_sentence_approx
-        )
-        if tokens_approx < target_input_tokens:
-            selected_sentences.append(selected_sentence)
-        else:
+    while get_token_len(render_prompt(selected_sentences)) < target_input_tokens:
+        selected_sentences.append(random.choice(TARGET_LONG_SENTENCES))
+        if get_token_len(render_prompt(selected_sentences)) > target_input_tokens:
+            selected_sentences.pop()
             break
 
-    sentence_num_tokens_avg = sum(
-        [get_token_len(sentence) for sentence in selected_sentences]
-    ) / len(selected_sentences)
-    num_output_sentences = math.ceil(target_output_tokens / sentence_num_tokens_avg)
-    num_output_sentences = min(num_output_sentences, len(selected_sentences))
-    selected_outout_sentence_indices = sorted(
-        random.sample(range(1, len(selected_sentences) + 1), num_output_sentences)
-    )
+    if len(selected_sentences) == 0:
+        raise ValueError(
+            "The length of prompt header and footer already exceeds target_input_tokens; increase target_input_tokens"
+        )
 
-    prompt = header
-    for i, sentence in enumerate(selected_sentences, 1):
-        prompt += f"{i}. {sentence}\n"
-    prompt += (
-        f"\nPlease translate the following numbered sentences into {selected_lang}: "
-        + ", ".join([str(i) for i in selected_outout_sentence_indices])
-        + f". Don't repeat the sentences in English. Only translate those {num_output_sentences} sentences. Number them in your response. Thank you!"
-    )
+    prompt = render_prompt(selected_sentences)
     return prompt
 
 
