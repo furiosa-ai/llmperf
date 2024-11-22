@@ -14,6 +14,9 @@ from ray.runtime_env import RuntimeEnv
 class FuriosaLLMClient(LLMClient):
     """Client for FuriosaAI LLM Completion API."""
 
+    def __init__(self, get_token_len):
+        self.get_token_len = get_token_len
+
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         """
         FuriosaAI LLM Completion API is compatible with OpenAIChatCompletion API.
@@ -31,11 +34,11 @@ class FuriosaLLMClient(LLMClient):
         os.environ["OPENAI_API_KEY"] = key
 
         # Use greedy search
-        if 'temperature' not in request_config.sampling_params:
-            request_config.sampling_params['temperature'] = 0.0
+        if "temperature" not in request_config.sampling_params:
+            request_config.sampling_params["temperature"] = 0.0
 
         actor = OpenAIChatCompletionsClient.options(
             runtime_env=RuntimeEnv(env_vars=dict(os.environ))
-        ).remote()
+        ).remote(self.get_token_len)
         future = actor.llm_request.remote(request_config)
         return ray.get(future)

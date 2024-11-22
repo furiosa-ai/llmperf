@@ -19,6 +19,9 @@ OPENAI_SYSTEM_MESSAGE_API = "You are a helpful assistant."
 class OpenAIChatCompletionsClient(LLMClient):
     """Client for OpenAI Chat Completions API."""
 
+    def __init__(self, get_token_len):
+        self.get_token_len = get_token_len
+
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         prompt = request_config.prompt
         prompt, prompt_len = prompt
@@ -36,7 +39,6 @@ class OpenAIChatCompletionsClient(LLMClient):
         sampling_params = request_config.sampling_params
         body.update(sampling_params or {})
         time_to_next_token = []
-        tokens_received = 0
         ttft = 0
         error_response_code = -1
         generated_text = ""
@@ -82,7 +84,6 @@ class OpenAIChatCompletionsClient(LLMClient):
                         continue
                     stem = "data: "
                     chunk = chunk[len(stem) :]
-                    tokens_received += 1
                     if chunk == b"[DONE]":
                         # Include "[DONE]" token as output
                         time_to_next_token.append(
@@ -109,6 +110,7 @@ class OpenAIChatCompletionsClient(LLMClient):
                         generated_text += delta["content"]
 
             total_request_time = time.monotonic() - start_time
+            tokens_received = self.get_token_len(generated_text)
             output_throughput = tokens_received / total_request_time
 
         except Exception as e:

@@ -76,11 +76,19 @@ def get_token_throughput_latencies(
 
     # Use same tokenizer with furiosa-llm serve
     tokenizer = PreTrainedTokenizerFast.from_pretrained(model)
-    
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    get_token_len = lambda text: len(tokenizer.encode(text))
+
     if not additional_sampling_params:
         additional_sampling_params = {}
 
-    clients = construct_clients(llm_api=llm_api, num_clients=num_concurrent_requests)
+    clients = construct_clients(
+        llm_api=llm_api,
+        num_clients=num_concurrent_requests,
+        get_token_len=get_token_len,
+    )
     req_launcher = construct_launcher(
         scenario, model, clients, additional_sampling_params
     )
@@ -100,7 +108,7 @@ def get_token_throughput_latencies(
                 prompt_tokens_mean=mean_input_tokens,
                 prompt_tokens_stddev=stddev_input_tokens,
                 expect_output_tokens=num_output_tokens,
-                tokenizer=tokenizer,
+                get_token_len=get_token_len,
             )
         )
 
@@ -111,10 +119,9 @@ def get_token_throughput_latencies(
     if e2e_latency >= test_timeout_s:
         print("Test timed out before all requests could be completed.")
 
-    # postprocess results
+    # collect results
     metrics = []
     for metric, _, _ in completed_requests:
-        # Do not need postprocess. Origin metric already has correct data.
         metrics.append(metric)
 
     print(

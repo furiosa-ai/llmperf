@@ -23,6 +23,7 @@ class SageMakerClient(LLMClient):
         self.tokenizer = LlamaTokenizerFast.from_pretrained(
             "hf-internal-testing/llama-tokenizer"
         )
+        self.get_token_len = lambda text: len(self.tokenizer.encode(text))
 
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         if not os.environ.get("AWS_ACCESS_KEY_ID"):
@@ -95,7 +96,7 @@ class SageMakerClient(LLMClient):
             resp = json.loads(json_byte)
             total_request_time = time.monotonic() - start_time
             generated_text = resp[0]["generation"]["content"]
-            tokens_received = len(self.tokenizer.encode(generated_text))
+            tokens_received = self.get_token_len(generated_text)
             output_throughput = tokens_received / total_request_time
 
         except Exception as e:
