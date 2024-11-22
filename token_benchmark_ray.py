@@ -24,7 +24,7 @@ from llmperf.utils import (
 )
 from tqdm import tqdm
 
-from transformers import LlamaTokenizerFast
+from transformers import PreTrainedTokenizerFast
 
 
 def construct_launcher(scenario, model, clients, additional_sampling_params):
@@ -74,11 +74,9 @@ def get_token_throughput_latencies(
     """
     random.seed(11111)
 
-    tokenizer = LlamaTokenizerFast.from_pretrained(
-        "hf-internal-testing/llama-tokenizer"
-    )
-    get_token_length = lambda text: len(tokenizer.encode(text))
-
+    # Use same tokenizer with furiosa-llm serve
+    tokenizer = PreTrainedTokenizerFast.from_pretrained("meta-llama/Meta-Llama-3.1-70B-Instruct")
+    
     if not additional_sampling_params:
         additional_sampling_params = {}
 
@@ -115,19 +113,8 @@ def get_token_throughput_latencies(
 
     # postprocess results
     metrics = []
-    for metric, gen_text, _ in completed_requests:
-        num_output_tokens = get_token_length(gen_text)
-        if num_output_tokens:
-            metric[common_metrics.INTER_TOKEN_LAT] /= num_output_tokens
-        else:
-            metric[common_metrics.INTER_TOKEN_LAT] = 0
-        metric[common_metrics.NUM_OUTPUT_TOKENS] = num_output_tokens
-        metric[common_metrics.NUM_TOTAL_TOKENS] = (
-            metric[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
-        )
-        metric[common_metrics.REQ_OUTPUT_THROUGHPUT] = (
-            num_output_tokens / metric[common_metrics.E2E_LAT]
-        )
+    for metric, _, _ in completed_requests:
+        # Do not need postprocess. Origin metric already has correct data.
         metrics.append(metric)
 
     print(
