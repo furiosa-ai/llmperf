@@ -74,7 +74,6 @@ def get_token_throughput_latencies(
     """
     random.seed(11111)
 
-    # Use same tokenizer with furiosa-llm serve
     tokenizer = PreTrainedTokenizerFast.from_pretrained(model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
