@@ -77,11 +77,14 @@ def get_prompt_long(target_input_tokens, target_output_tokens, get_token_len):
     # select target language
     selected_lang = random.choice(TARGET_LANG)
 
-    # approx num_output_sentences
-    sentence_num_tokens_avg = sum(
-        [get_token_len(sentence) for sentence in TARGET_LONG_SENTENCES]
-    ) / len(TARGET_LONG_SENTENCES)
-    num_output_sentences = math.ceil(target_output_tokens / sentence_num_tokens_avg)
+    # approximate num_output_sentences
+    sentence_num_tokens_min = min(
+        get_token_len(sentence) for sentence in TARGET_LONG_SENTENCES
+    )
+    sentence_num_tokens_max = max(
+        get_token_len(sentence) for sentence in TARGET_LONG_SENTENCES
+    )
+    num_output_sentences = math.ceil(target_output_tokens / sentence_num_tokens_min)
 
     def render_prompt(selected_sentences):
         prompt = f"Below is a list of sentences. I'd like you to translate a few of them into {selected_lang} please:\n\n"
@@ -100,7 +103,20 @@ def get_prompt_long(target_input_tokens, target_output_tokens, get_token_len):
         )
         return prompt
 
-    selected_sentences = []
+    # approximate the starting point, since starting from zero takes too long
+    approx_header_footer_tokens = get_token_len(
+        "Below is a list of sentences. I'd like you to translate a few of them into French please:\n\n"
+        + "\nPlease translate the following numbered sentences into French: "
+        + ". Don't repeat the sentences in English. Only translate those 50 sentences. Number them in your response. Thank you!"
+    )
+    num_selected_sentence_start = (
+        target_input_tokens - approx_header_footer_tokens
+    ) // sentence_num_tokens_max
+    selected_sentences = random.sample(
+        TARGET_LONG_SENTENCES, num_selected_sentence_start
+    )
+
+    # make prompt as close to target_input_tokens as possible
     while get_token_len(render_prompt(selected_sentences)) < target_input_tokens:
         selected_sentences.append(random.choice(TARGET_LONG_SENTENCES))
         if get_token_len(render_prompt(selected_sentences)) > target_input_tokens:
