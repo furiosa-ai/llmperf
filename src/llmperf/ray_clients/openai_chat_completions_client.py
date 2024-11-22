@@ -40,6 +40,7 @@ class OpenAIChatCompletionsClient(LLMClient):
         body.update(sampling_params or {})
         time_to_next_token = []
         ttft = 0
+        tokens_received = 0
         error_response_code = -1
         generated_text = ""
         error_msg = ""
