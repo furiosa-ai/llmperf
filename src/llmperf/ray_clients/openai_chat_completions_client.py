@@ -45,14 +45,13 @@ class OpenAIChatCompletionsClient(LLMClient):
         error_msg = ""
         output_throughput = 0
         total_request_time = 0
+        finish_reason = None
 
         metrics = {}
 
         metrics[common_metrics.ERROR_CODE] = None
         metrics[common_metrics.ERROR_MSG] = ""
 
-        start_time = time.monotonic()
-        most_recent_received_token_time = time.monotonic()
         address = os.environ.get("OPENAI_API_BASE")
         if not address:
             raise ValueError("the environment variable OPENAI_API_BASE must be set.")
@@ -65,6 +64,9 @@ class OpenAIChatCompletionsClient(LLMClient):
         if not address.endswith("/"):
             address = address + "/"
         address += "chat/completions"
+        
+        start_time = time.monotonic()
+        most_recent_received_token_time = time.monotonic()
         try:
             with requests.post(
                 address,
@@ -85,10 +87,12 @@ class OpenAIChatCompletionsClient(LLMClient):
                     stem = "data: "
                     chunk = chunk[len(stem) :]
                     if chunk == b"[DONE]":
-                        # Include "[DONE]" token as output
-                        time_to_next_token.append(
-                            time.monotonic() - most_recent_received_token_time
-                        )
+                        finish_reason = data["choices"][0]["finish_reason"]
+                        if finish_reason == "stop":
+                            time_to_next_token.append(
+                                time.monotonic() - most_recent_received_token_time
+                            )
+                            most_recent_received_token_time = time.monotonic()
                         continue
                     data = json.loads(chunk)
 
@@ -111,6 +115,9 @@ class OpenAIChatCompletionsClient(LLMClient):
 
             total_request_time = time.monotonic() - start_time
             tokens_received = self.get_token_len(generated_text)
+            # Include DONE token as output
+            if finish_reason == "stop":
+                tokens_received += 1
             output_throughput = tokens_received / total_request_time
 
         except Exception as e:

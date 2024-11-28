@@ -24,7 +24,7 @@ from llmperf.utils import (
 )
 from tqdm import tqdm
 
-from transformers import PreTrainedTokenizerFast
+from transformers import AutoTokenizer
 
 
 def construct_launcher(scenario, model, clients, additional_sampling_params):
@@ -74,11 +74,11 @@ def get_token_throughput_latencies(
     """
     random.seed(11111)
 
-    tokenizer = PreTrainedTokenizerFast.from_pretrained(model)
+    tokenizer = AutoTokenizer.from_pretrained(model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    get_token_len = lambda text: len(tokenizer.encode(text))
+    get_token_len = lambda text: len(tokenizer.encode(text, add_special_tokens=False))
 
     if not additional_sampling_params:
         additional_sampling_params = {}
