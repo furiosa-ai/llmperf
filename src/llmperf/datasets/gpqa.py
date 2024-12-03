@@ -56,8 +56,8 @@ def randomly_sample_gpqa_prompt(
         prompt = QUERY_TEMPLATE_MULTICHOICE.format(**choices_dict)
         prompts.append(prompt)
 
-        if get_token_len(prompt) < min_prompt_length:
-            min_prompt_length = get_token_len(prompt)
+        if (token_len := get_token_len(prompt)) < min_prompt_length:
+            min_prompt_length = token_len
 
     num_prompt_tokens = sample_random_positive_int(
         prompt_tokens_mean, prompt_tokens_stddev

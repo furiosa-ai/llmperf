@@ -64,7 +64,7 @@ class OpenAIChatCompletionsClient(LLMClient):
         if not address.endswith("/"):
             address = address + "/"
         address += "chat/completions"
-        
+
         start_time = time.monotonic()
         most_recent_received_token_time = time.monotonic()
         try:
