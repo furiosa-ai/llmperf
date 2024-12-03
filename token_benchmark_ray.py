@@ -24,7 +24,7 @@ from llmperf.utils import (
 )
 from tqdm import tqdm
 
-from transformers import LlamaTokenizerFast
+from transformers import AutoTokenizer
 
 
 def construct_launcher(scenario, model, clients, additional_sampling_params):
@@ -74,15 +74,20 @@ def get_token_throughput_latencies(
     """
     random.seed(11111)
 
-    tokenizer = LlamaTokenizerFast.from_pretrained(
-        "hf-internal-testing/llama-tokenizer"
-    )
-    get_token_length = lambda text: len(tokenizer.encode(text))
+    tokenizer = AutoTokenizer.from_pretrained(model)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    get_token_len = lambda text: len(tokenizer.encode(text, add_special_tokens=False))
 
     if not additional_sampling_params:
         additional_sampling_params = {}
 
-    clients = construct_clients(llm_api=llm_api, num_clients=num_concurrent_requests)
+    clients = construct_clients(
+        llm_api=llm_api,
+        num_clients=num_concurrent_requests,
+        get_token_len=get_token_len,
+    )
     req_launcher = construct_launcher(
         scenario, model, clients, additional_sampling_params
     )
@@ -102,7 +107,7 @@ def get_token_throughput_latencies(
                 prompt_tokens_mean=mean_input_tokens,
                 prompt_tokens_stddev=stddev_input_tokens,
                 expect_output_tokens=num_output_tokens,
-                tokenizer=tokenizer,
+                get_token_len=get_token_len,
             )
         )
 
@@ -113,21 +118,9 @@ def get_token_throughput_latencies(
     if e2e_latency >= test_timeout_s:
         print("Test timed out before all requests could be completed.")
 
-    # postprocess results
+    # collect results
     metrics = []
-    for metric, gen_text, _ in completed_requests:
-        num_output_tokens = get_token_length(gen_text)
-        if num_output_tokens:
-            metric[common_metrics.INTER_TOKEN_LAT] /= num_output_tokens
-        else:
-            metric[common_metrics.INTER_TOKEN_LAT] = 0
-        metric[common_metrics.NUM_OUTPUT_TOKENS] = num_output_tokens
-        metric[common_metrics.NUM_TOTAL_TOKENS] = (
-            metric[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
-        )
-        metric[common_metrics.REQ_OUTPUT_THROUGHPUT] = (
-            num_output_tokens / metric[common_metrics.E2E_LAT]
-        )
+    for metric, _, _ in completed_requests:
         metrics.append(metric)
 
     print(

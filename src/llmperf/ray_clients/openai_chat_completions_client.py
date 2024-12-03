@@ -19,6 +19,9 @@ OPENAI_SYSTEM_MESSAGE_API = "You are a helpful assistant."
 class OpenAIChatCompletionsClient(LLMClient):
     """Client for OpenAI Chat Completions API."""
 
+    def __init__(self, get_token_len):
+        self.get_token_len = get_token_len
+
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         prompt = request_config.prompt
         prompt, prompt_len = prompt
@@ -36,21 +39,19 @@ class OpenAIChatCompletionsClient(LLMClient):
         sampling_params = request_config.sampling_params
         body.update(sampling_params or {})
         time_to_next_token = []
-        tokens_received = 0
         ttft = 0
         error_response_code = -1
         generated_text = ""
         error_msg = ""
         output_throughput = 0
         total_request_time = 0
+        finish_reason = None
 
         metrics = {}
 
         metrics[common_metrics.ERROR_CODE] = None
         metrics[common_metrics.ERROR_MSG] = ""
 
-        start_time = time.monotonic()
-        most_recent_received_token_time = time.monotonic()
         address = os.environ.get("OPENAI_API_BASE")
         if not address:
             raise ValueError("the environment variable OPENAI_API_BASE must be set.")
@@ -63,6 +64,9 @@ class OpenAIChatCompletionsClient(LLMClient):
         if not address.endswith("/"):
             address = address + "/"
         address += "chat/completions"
+
+        start_time = time.monotonic()
+        most_recent_received_token_time = time.monotonic()
         try:
             with requests.post(
                 address,
@@ -83,8 +87,13 @@ class OpenAIChatCompletionsClient(LLMClient):
                     stem = "data: "
                     chunk = chunk[len(stem) :]
                     if chunk == b"[DONE]":
+                        finish_reason = data["choices"][0]["finish_reason"]
+                        if finish_reason == "stop":
+                            time_to_next_token.append(
+                                time.monotonic() - most_recent_received_token_time
+                            )
+                            most_recent_received_token_time = time.monotonic()
                         continue
-                    tokens_received += 1
                     data = json.loads(chunk)
 
                     if "error" in data:
@@ -105,6 +114,10 @@ class OpenAIChatCompletionsClient(LLMClient):
                         generated_text += delta["content"]
 
             total_request_time = time.monotonic() - start_time
+            tokens_received = self.get_token_len(generated_text)
+            # Include DONE token as output
+            if finish_reason == "stop":
+                tokens_received += 1
             output_throughput = tokens_received / total_request_time
 
         except Exception as e:
@@ -113,9 +126,8 @@ class OpenAIChatCompletionsClient(LLMClient):
             print(f"Warning Or Error: {e}")
             print(error_response_code)
 
-        metrics[common_metrics.INTER_TOKEN_LAT] = sum(
-            time_to_next_token
-        )  # This should be same as metrics[common_metrics.E2E_LAT]. Leave it here for now
+        # Exclude ttft
+        metrics[common_metrics.INTER_TOKEN_LAT] = time_to_next_token[1:]
         metrics[common_metrics.TTFT] = ttft
         metrics[common_metrics.E2E_LAT] = total_request_time
         metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput

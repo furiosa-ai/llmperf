@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable
 from llmperf.ray_clients.furiosa_client import FuriosaLLMClient
 from llmperf.ray_clients.litellm_client import LiteLLMClient
 from llmperf.ray_clients.openai_chat_completions_client import (
@@ -12,7 +12,9 @@ from llmperf.ray_llm_client import LLMClient
 SUPPORTED_APIS = ["openai", "anthropic", "litellm"]
 
 
-def construct_clients(llm_api: str, num_clients: int) -> List[LLMClient]:
+def construct_clients(
+    llm_api: str, num_clients: int, get_token_len: Callable[[str], int]
+) -> List[LLMClient]:
     """Construct LLMClients that will be used to make requests to the LLM API.
 
     Args:
@@ -24,15 +26,18 @@ def construct_clients(llm_api: str, num_clients: int) -> List[LLMClient]:
 
     """
     if llm_api == "openai":
-        clients = [OpenAIChatCompletionsClient.remote() for _ in range(num_clients)]
+        clients = [
+            OpenAIChatCompletionsClient.remote(get_token_len)
+            for _ in range(num_clients)
+        ]
     elif llm_api == "sagemaker":
         clients = [SageMakerClient.remote() for _ in range(num_clients)]
     elif llm_api == "vertexai":
         clients = [VertexAIClient.remote() for _ in range(num_clients)]
     elif llm_api == "furiosa":
-        clients = [FuriosaLLMClient.remote() for _ in range(num_clients)]
+        clients = [FuriosaLLMClient.remote(get_token_len) for _ in range(num_clients)]
     elif llm_api in SUPPORTED_APIS:
-        clients = [LiteLLMClient.remote() for _ in range(num_clients)]
+        clients = [LiteLLMClient.remote(get_token_len) for _ in range(num_clients)]
     else:
         raise ValueError(
             f"llm_api must be one of the supported LLM APIs: {SUPPORTED_APIS}"

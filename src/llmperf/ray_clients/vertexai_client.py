@@ -22,6 +22,7 @@ class VertexAIClient(LLMClient):
         self.tokenizer = LlamaTokenizerFast.from_pretrained(
             "hf-internal-testing/llama-tokenizer"
         )
+        self.get_token_len = lambda text: len(self.tokenizer.encode(text))
 
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         project_id = os.environ.get("GCLOUD_PROJECT_ID")
@@ -86,7 +87,7 @@ class VertexAIClient(LLMClient):
             # output from the endpoint is in the form:
             # {"predictions": ["Input: ... \nOutput:\n ..."]}
             generated_text = response.json()["predictions"][0].split("\nOutput:\n")[1]
-            tokens_received = len(self.tokenizer.encode(generated_text))
+            tokens_received = self.get_token_len(generated_text)
             ttft = -1
             output_throughput = tokens_received / total_request_time
             time_to_next_token = [

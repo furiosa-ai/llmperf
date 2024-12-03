@@ -1,22 +1,16 @@
 import random
-from typing import Tuple
-from transformers import AutoTokenizer
+from typing import Tuple, Callable
 from human_eval.data import read_problems
 
 from llmperf.utils import sample_random_positive_int
 
 
 def randomly_sample_human_eval_prompt(
+    get_token_len: Callable[[str], int],
     prompt_tokens_mean: int = 550,
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
-    tokenizer=AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct"),
 ) -> Tuple[str, int]:
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    get_token_length = lambda text: len(tokenizer.encode(text))
-
     # Instruction from AA's sample code
     prompt = "Read the following function signature and docstring, and fully implement the function described. Your response should only contain the code for this function.\n"
 
@@ -24,15 +18,15 @@ def randomly_sample_human_eval_prompt(
     num_prompt_tokens = sample_random_positive_int(
         prompt_tokens_mean, prompt_tokens_stddev
     )
-    while num_prompt_tokens < get_token_length(prompt):
+    while num_prompt_tokens < get_token_len(prompt):
         num_prompt_tokens = sample_random_positive_int(
             prompt_tokens_mean, prompt_tokens_stddev
         )
-    remaining_prompt_tokens = num_prompt_tokens - get_token_length(prompt)
+    remaining_prompt_tokens = num_prompt_tokens - get_token_len(prompt)
     problems = read_problems()
     task_ids = list(problems.keys())
     task_id = random.choice(task_ids)
-    while remaining_prompt_tokens < get_token_length(problems[task_id]["prompt"]):
+    while remaining_prompt_tokens < get_token_len(problems[task_id]["prompt"]):
         task_id = random.choice(task_ids)
     prompt += problems[task_id]["prompt"]
 
@@ -44,4 +38,4 @@ def randomly_sample_human_eval_prompt(
     #     remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
     # prompt += tokenizer.pad_token * (pad_token_num - 1)
 
-    return [prompt, get_token_length(prompt)]
+    return [prompt, get_token_len(prompt)]

@@ -11,6 +11,9 @@ from llmperf import common_metrics
 class LiteLLMClient(LLMClient):
     """Client for LiteLLM Completions API."""
 
+    def __init__(self, get_token_len):
+        self.get_token_len = get_token_len
+
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         # litellm package isn't serializable, so we import it within the function
         # to maintain compatibility with ray.

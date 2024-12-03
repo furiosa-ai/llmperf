@@ -7,6 +7,8 @@ from llmperf.models import RequestConfig
 class LLMClient:
     """A client for making requests to a LLM API e.g Anyscale Endpoints."""
 
+    get_token_len = None
+
     @abc.abstractmethod
     def llm_request(
         self, request_config: RequestConfig

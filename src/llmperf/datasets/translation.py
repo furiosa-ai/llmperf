@@ -1,27 +1,20 @@
 import random
-from typing import Tuple
-from transformers import AutoTokenizer
+from typing import Tuple, Callable
 
 
 def randomly_sample_translation_prompt(
+    get_token_len: Callable[[str], int],
     prompt_tokens_mean: int = 550,
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
-    tokenizer=AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct"),
 ) -> Tuple[str, int]:
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    def get_token_length(text):
-        return len(tokenizer.encode(text))
-
     # XXX: use this overly simplified condition for now
     if prompt_tokens_mean < 400:
         prompt = get_prompt_100()
     else:
-        prompt = get_prompt_1000(tokenizer)
+        prompt = get_prompt_1000(get_token_len)
 
-    return [prompt, get_token_length(prompt)]
+    return [prompt, get_token_len(prompt)]
 
 
 def get_prompt_100():
@@ -39,7 +32,7 @@ def get_prompt_100():
     return out
 
 
-def get_prompt_1000(tokenizer):
+def get_prompt_1000(get_token_len):
     """
     Example:
 
@@ -89,7 +82,7 @@ def get_prompt_1000(tokenizer):
     while num_actual_input_sentences < max_num_input_sentences:
         this = f"{num_actual_input_sentences + 1}. {selected_sentences[num_actual_input_sentences]}\n"
         if (
-            len(tokenizer.encode(target_sentence_prompt + this))
+            get_token_len(target_sentence_prompt + this)
             > max_target_sentence_prompt_tokens
         ):
             break
