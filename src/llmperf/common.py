@@ -13,7 +13,7 @@ SUPPORTED_APIS = ["openai", "anthropic", "litellm"]
 
 
 def construct_clients(
-    llm_api: str, num_clients: int, get_token_len: Callable
+    llm_api: str, num_clients: int, get_token_len: Callable[[str], int]
 ) -> List[LLMClient]:
     """Construct LLMClients that will be used to make requests to the LLM API.
 
