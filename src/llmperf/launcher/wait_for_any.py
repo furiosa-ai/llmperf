@@ -5,7 +5,7 @@ from llmperf.launcher import RequestsLauncher
 from llmperf.models import RequestConfig
 
 
-class SingleStreamLauncher(RequestsLauncher):
+class WaitForAnyLauncher(RequestsLauncher):
 
     def launch(
         self,

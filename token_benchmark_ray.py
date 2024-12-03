@@ -16,8 +16,8 @@ from llmperf.common import SUPPORTED_APIS, construct_clients
 from llmperf.datasets import randomly_sample_prompt
 from llmperf.launcher import SUPPROTED_SCENARIO
 
-from llmperf.launcher.multi_stream import MultiStreamLauncher
-from llmperf.launcher.single_stream import SingleStreamLauncher
+from llmperf.launcher.wait_for_all import WaitForAllLauncher
+from llmperf.launcher.wait_for_any import WaitForAnyLauncher
 from llmperf.utils import (
     LLMPerfResults,
     sample_random_positive_int,
@@ -27,26 +27,25 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 
-def construct_launcher(scenario, model, clients, additional_sampling_params):
-    # FIXME: Is it proper naming?
-    if scenario == "single-stream":
-        return SingleStreamLauncher(model, clients, additional_sampling_params)
-    elif scenario == "multi-stream":
-        return MultiStreamLauncher(model, clients, additional_sampling_params)
+def construct_launcher(wait_for, model, clients, additional_sampling_params):
+    if wait_for == "all":
+        return WaitForAllLauncher(model, clients, additional_sampling_params)
+    elif wait_for == "any":
+        return WaitForAnyLauncher(model, clients, additional_sampling_params)
     else:
-        raise ValueError(f"Not supported scenario {scenario}")
+        raise ValueError(f"Wrong type for 'wait_for' option: {wait_for}")
 
 
 def get_token_throughput_latencies(
     model: str,
     dataset: str,
-    scenario: str,
     mean_input_tokens: int,
     stddev_input_tokens: int,
     mean_output_tokens: int,
     stddev_output_tokens: int,
     additional_sampling_params: Optional[Dict[str, Any]] = None,
     num_concurrent_requests: int = 1,
+    wait_for: str = all,
     max_num_completed_requests: int = 500,
     test_timeout_s=90,
     llm_api="openai",
@@ -89,7 +88,7 @@ def get_token_throughput_latencies(
         get_token_len=get_token_len,
     )
     req_launcher = construct_launcher(
-        scenario, model, clients, additional_sampling_params
+        wait_for, model, clients, additional_sampling_params
     )
 
     # prepare prompts
@@ -243,7 +242,7 @@ def run_token_benchmark(
     llm_api: str,
     model: str,
     dataset: str,
-    scenario: str,
+    wait_for: str,
     test_timeout_s: int,
     max_num_completed_requests: int,
     num_concurrent_requests: int,
@@ -283,7 +282,6 @@ def run_token_benchmark(
         model=model,
         dataset=dataset,
         llm_api=llm_api,
-        scenario=scenario,
         test_timeout_s=test_timeout_s,
         max_num_completed_requests=max_num_completed_requests,
         mean_input_tokens=mean_input_tokens,
@@ -291,6 +289,7 @@ def run_token_benchmark(
         mean_output_tokens=mean_output_tokens,
         stddev_output_tokens=stddev_output_tokens,
         num_concurrent_requests=num_concurrent_requests,
+        wait_for=wait_for,
         additional_sampling_params=json.loads(additional_sampling_params),
     )
 
@@ -425,11 +424,11 @@ args.add_argument(
     ),
 )
 args.add_argument(
-    "--scenario",
+    "--wait-for",
     type=str,
-    default="multi-stream",
+    default="all",
     help=(
-        f"The name of the llm api to use. Can select from {SUPPROTED_SCENARIO}"
+        f"The scenario of concurrency requests. Can select from [all, any]"
         " (default: %(default)s)"
     ),
 )
@@ -459,7 +458,6 @@ if __name__ == "__main__":
         llm_api=args.llm_api,
         model=args.model,
         dataset=args.dataset,
-        scenario=args.scenario,
         test_timeout_s=args.timeout,
         max_num_completed_requests=args.max_num_completed_requests,
         mean_input_tokens=args.mean_input_tokens,
@@ -467,6 +465,7 @@ if __name__ == "__main__":
         mean_output_tokens=args.mean_output_tokens,
         stddev_output_tokens=args.stddev_output_tokens,
         num_concurrent_requests=args.num_concurrent_requests,
+        wait_for=args.wait_for,
         additional_sampling_params=args.additional_sampling_params,
         results_dir=args.results_dir,
         user_metadata=user_metadata,
