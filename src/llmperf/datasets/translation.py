@@ -3,10 +3,10 @@ from typing import Tuple, Callable
 
 
 def randomly_sample_translation_prompt(
+    get_token_len: Callable[[str], int],
     prompt_tokens_mean: int = 550,
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
-    get_token_len=Callable[[str], int],
 ) -> Tuple[str, int]:
     # XXX: use this overly simplified condition for now
     if prompt_tokens_mean < 400:

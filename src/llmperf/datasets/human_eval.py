@@ -6,10 +6,10 @@ from llmperf.utils import sample_random_positive_int
 
 
 def randomly_sample_human_eval_prompt(
+    get_token_len: Callable[[str], int],
     prompt_tokens_mean: int = 550,
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
-    get_token_len=Callable[[str], int],
 ) -> Tuple[str, int]:
     # Instruction from AA's sample code
     prompt = "Read the following function signature and docstring, and fully implement the function described. Your response should only contain the code for this function.\n"

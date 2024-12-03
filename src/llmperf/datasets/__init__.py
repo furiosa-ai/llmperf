@@ -25,8 +25,8 @@ def randomly_sample_prompt(
         raise ValueError(f"Not supported dataset {dataset}")
 
     return f(
+        get_token_len,
         prompt_tokens_mean,
         prompt_tokens_stddev,
         expect_output_tokens,
-        get_token_len,
     )
