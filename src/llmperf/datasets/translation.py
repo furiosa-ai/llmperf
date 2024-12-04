@@ -77,13 +77,13 @@ def get_prompt_long(target_input_tokens, target_output_tokens, get_token_len):
     # select target language
     selected_lang = random.choice(TARGET_LANG)
 
-    # approximate num_output_sentences
+    # use shortest sentence to approximate number of given / output sentences
     sentence_num_tokens_min = min(
         get_token_len(sentence) for sentence in TARGET_LONG_SENTENCES
     )
-    sentence_num_tokens_max = max(
-        get_token_len(sentence) for sentence in TARGET_LONG_SENTENCES
-    )
+
+    num_given_sentences_lo = 0
+    num_given_sentences_hi = math.ceil(target_input_tokens / sentence_num_tokens_min)
     num_output_sentences = math.ceil(target_output_tokens / sentence_num_tokens_min)
 
     def render_prompt(selected_sentences):
@@ -103,25 +103,14 @@ def get_prompt_long(target_input_tokens, target_output_tokens, get_token_len):
         )
         return prompt
 
-    # approximate the starting point, since starting from zero takes too long
-    approx_header_footer_tokens = get_token_len(
-        "Below is a list of sentences. I'd like you to translate a few of them into French please:\n\n"
-        + "\nPlease translate the following numbered sentences into French: "
-        + ". Don't repeat the sentences in English. Only translate those 50 sentences. Number them in your response. Thank you!"
-    )
-    num_selected_sentence_start = (
-        target_input_tokens - approx_header_footer_tokens
-    ) // sentence_num_tokens_max
-    selected_sentences = random.sample(
-        TARGET_LONG_SENTENCES, num_selected_sentence_start
-    )
-
-    # make prompt as close to target_input_tokens as possible
-    while get_token_len(render_prompt(selected_sentences)) < target_input_tokens:
-        selected_sentences.append(random.choice(TARGET_LONG_SENTENCES))
-        if get_token_len(render_prompt(selected_sentences)) > target_input_tokens:
-            selected_sentences.pop()
-            break
+    selected = random.choices(TARGET_LONG_SENTENCES, k=num_given_sentences_hi)
+    while num_given_sentences_lo < num_given_sentences_hi:
+        pivot = (num_given_sentences_lo + num_given_sentences_hi + 1) // 2
+        if get_token_len(render_prompt(selected[:pivot])) <= target_input_tokens:
+            num_given_sentences_lo = pivot
+        else:
+            num_given_sentences_hi = pivot - 1
+    selected_sentences = selected[:num_given_sentences_lo]
 
     if len(selected_sentences) == 0:
         raise ValueError(
