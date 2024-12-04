@@ -14,7 +14,6 @@ from llmperf import common_metrics
 from llmperf.common import SUPPORTED_APIS, construct_clients
 
 from llmperf.datasets import randomly_sample_prompt
-from llmperf.launcher import SUPPROTED_SCENARIO
 
 from llmperf.launcher.wait_for_all import WaitForAllLauncher
 from llmperf.launcher.wait_for_any import WaitForAnyLauncher
@@ -22,7 +21,6 @@ from llmperf.utils import (
     LLMPerfResults,
     sample_random_positive_int,
 )
-from tqdm import tqdm
 
 from transformers import AutoTokenizer
 
@@ -428,7 +426,7 @@ args.add_argument(
     type=str,
     default="all",
     help=(
-        f"The scenario of concurrency requests. Can select from [all, any]"
+        "The number of requests in a bundle that should be completed before sending the next bundle. Can select from [all, any]"
         " (default: %(default)s)"
     ),
 )

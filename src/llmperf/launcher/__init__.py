@@ -5,8 +5,6 @@ from llmperf.models import RequestConfig
 from llmperf.ray_llm_client import LLMClient
 from ray.util import ActorPool
 
-SUPPROTED_SCENARIO = ["multi-stream", "single-stream"]
-
 
 class RequestsLauncher:
     """Launch requests from LLMClients to their respective LLM APIs."""
