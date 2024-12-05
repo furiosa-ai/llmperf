@@ -16,14 +16,14 @@ def randomly_sample_translation_prompt(
     )
     num_prompt_tokens = max(num_prompt_tokens, 100)
     if num_prompt_tokens <= 150:
-        prompt = get_prompt_100()
+        prompt = get_prompt_short()
     else:
         prompt = get_prompt_long(num_prompt_tokens, expect_output_tokens, get_token_len)
 
     return [prompt, get_token_len(prompt)]
 
 
-def get_prompt_100():
+def get_prompt_short():
     """
     Example:
 
