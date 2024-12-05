@@ -43,7 +43,7 @@ def get_token_throughput_latencies(
     stddev_output_tokens: int,
     additional_sampling_params: Optional[Dict[str, Any]] = None,
     num_concurrent_requests: int = 1,
-    wait_for: str = all,
+    wait_for: str = "all",
     max_num_completed_requests: int = 500,
     test_timeout_s=90,
     llm_api="openai",
@@ -415,7 +415,7 @@ args.add_argument(
 args.add_argument(
     "--llm-api",
     type=str,
-    default="openai",
+    default="furiosa",
     help=(
         f"The name of the llm api to use. Can select from {SUPPORTED_APIS}"
         " (default: %(default)s)"
