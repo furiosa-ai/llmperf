@@ -1,7 +1,6 @@
 # TODO: Generalize dataset loading method using abstraction class like LLMClient
 from typing import Tuple
 from llmperf.datasets.gpqa import randomly_sample_gpqa_prompt
-from llmperf.datasets.human_eval import randomly_sample_human_eval_prompt
 from llmperf.datasets.sonnet import randomly_sample_sonnet_lines_prompt
 from llmperf.datasets.translation import randomly_sample_translation_prompt
 
@@ -16,6 +15,8 @@ def randomly_sample_prompt(
     if dataset == "sonnet":
         f = randomly_sample_sonnet_lines_prompt
     elif dataset == "human-eval":
+        from llmperf.datasets.human_eval import randomly_sample_human_eval_prompt
+
         f = randomly_sample_human_eval_prompt
     elif dataset == "gpqa":
         f = randomly_sample_gpqa_prompt
