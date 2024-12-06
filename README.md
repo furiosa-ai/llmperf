@@ -11,13 +11,9 @@ pip install -e .
 
 # Basic Usage
 
-We implement a load test for evaluating LLMs to check for performance.
+We implement a load test for evaluating LLMs to check for performance. The test spawns a number of concurrent requests to the LLM API and measures the inter-token latency and generation throughput per request and across concurrent requests.
 
-## Load test
-
-The load test spawns a number of concurrent requests to the LLM API and measures the inter-token latency and generation throughput per request and across concurrent requests.
-
-We support various llm clients, datasets, and scenarios. To run the most basic load test you can the token_benchmark_ray script.
+We support various llm clients, datasets, and scenarios. To run the most basic load test you can the `benchmark.py` script.
 
 
 ### Caveats and Disclaimers
@@ -31,7 +27,7 @@ We support various llm clients, datasets, and scenarios. To run the most basic l
 ```bash
 export FURIOSA_API_BASE=FURIOSA_API_ENDOPINT
 
-python token_benchmark_ray.py \
+python benchmark.py \
 --model "meta-llama/Llama-3.2-1B-Instruct" \
 --dataset translation \
 --mean-input-tokens 550 \
@@ -53,7 +49,7 @@ python token_benchmark_ray.py \
 export OPENAI_API_KEY=secret_abcdefg
 export OPENAI_API_BASE="https://api.endpoints.anyscale.com/v1"
 
-python token_benchmark_ray.py \
+python benchmark.py \
 --model "meta-llama/Llama-3.2-1B-Instruct" \
 --dataset sonnet \
 --mean-input-tokens 550 \
@@ -70,7 +66,7 @@ python token_benchmark_ray.py \
 
 ```
 
-see `python token_benchmark_ray.py --help` for more details on the arguments.
+see `python benchmark.py --help` for more details on the arguments.
 
 
 # Advanced Usage

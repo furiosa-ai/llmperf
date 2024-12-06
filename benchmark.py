@@ -225,7 +225,7 @@ def metrics_summary(metrics: List[Dict[str, Any]], e2e_latency: int) -> Dict[str
     return ret
 
 
-def run_token_benchmark(
+def run_benchmark(
     llm_api: str,
     model: str,
     dataset: str,
@@ -441,7 +441,7 @@ if __name__ == "__main__":
             key, value = item.split("=")
             user_metadata[key] = value
 
-    run_token_benchmark(
+    run_benchmark(
         llm_api=args.llm_api,
         model=args.model,
         dataset=args.dataset,
