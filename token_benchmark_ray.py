@@ -11,27 +11,16 @@ import pandas as pd
 import ray
 
 from llmperf import common_metrics
-from llmperf.common import SUPPORTED_APIS, construct_clients
+from llmperf.common import SUPPORTED_APIS, construct_clients, construct_launcher
 
 from llmperf.datasets import randomly_sample_prompt
 
-from llmperf.launcher.wait_for_all import WaitForAllLauncher
-from llmperf.launcher.wait_for_any import WaitForAnyLauncher
 from llmperf.utils import (
     LLMPerfResults,
     sample_random_positive_int,
 )
 
 from transformers import AutoTokenizer
-
-
-def construct_launcher(wait_for, model, clients, additional_sampling_params):
-    if wait_for == "all":
-        return WaitForAllLauncher(model, clients, additional_sampling_params)
-    elif wait_for == "any":
-        return WaitForAnyLauncher(model, clients, additional_sampling_params)
-    else:
-        raise ValueError(f"Wrong type for 'wait_for' option: {wait_for}")
 
 
 def get_token_throughput_latencies(

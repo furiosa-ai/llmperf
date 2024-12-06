@@ -5,7 +5,7 @@ from llmperf.models import RequestConfig
 from llmperf.ray_clients.openai_chat_completions_client import (
     OpenAIChatCompletionsClient,
 )
-from llmperf.ray_llm_client import LLMClient
+from llmperf.ray_clients import LLMClient
 import ray
 from ray.runtime_env import RuntimeEnv
 
