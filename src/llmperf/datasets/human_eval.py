@@ -30,12 +30,4 @@ def randomly_sample_human_eval_prompt(
         task_id = random.choice(task_ids)
     prompt += problems[task_id]["prompt"]
 
-    # padding
-    # remaining_prompt_tokens -= get_token_length(prompt)
-    # pad_token_num = 0
-    # while remaining_prompt_tokens > 0:
-    #     pad_token_num += 1
-    #     remaining_prompt_tokens -= get_token_length(tokenizer.pad_token * pad_token_num)
-    # prompt += tokenizer.pad_token * (pad_token_num - 1)
-
     return [prompt, get_token_len(prompt)]

@@ -2,7 +2,7 @@ import abc
 from typing import Any, List, Dict, Tuple
 
 from llmperf.models import RequestConfig
-from llmperf.ray_llm_client import LLMClient
+from llmperf.ray_clients import LLMClient
 from ray.util import ActorPool
 
 

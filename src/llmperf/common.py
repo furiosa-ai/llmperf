@@ -1,15 +1,15 @@
-from typing import List, Callable
+from typing import Any, Dict, List, Callable
+from llmperf.launcher import RequestsLauncher
+from llmperf.launcher.wait_for_all import WaitForAllLauncher
+from llmperf.launcher.wait_for_any import WaitForAnyLauncher
 from llmperf.ray_clients.furiosa_client import FuriosaLLMClient
-from llmperf.ray_clients.litellm_client import LiteLLMClient
 from llmperf.ray_clients.openai_chat_completions_client import (
     OpenAIChatCompletionsClient,
 )
-from llmperf.ray_clients.sagemaker_client import SageMakerClient
-from llmperf.ray_clients.vertexai_client import VertexAIClient
-from llmperf.ray_llm_client import LLMClient
+from llmperf.ray_clients import LLMClient
 
 
-SUPPORTED_APIS = ["openai", "anthropic", "litellm"]
+SUPPORTED_APIS = ["openai", "furiosa"]
 
 
 def construct_clients(
@@ -30,17 +30,38 @@ def construct_clients(
             OpenAIChatCompletionsClient.remote(get_token_len)
             for _ in range(num_clients)
         ]
-    elif llm_api == "sagemaker":
-        clients = [SageMakerClient.remote() for _ in range(num_clients)]
-    elif llm_api == "vertexai":
-        clients = [VertexAIClient.remote() for _ in range(num_clients)]
     elif llm_api == "furiosa":
         clients = [FuriosaLLMClient.remote(get_token_len) for _ in range(num_clients)]
-    elif llm_api in SUPPORTED_APIS:
-        clients = [LiteLLMClient.remote(get_token_len) for _ in range(num_clients)]
     else:
         raise ValueError(
             f"llm_api must be one of the supported LLM APIs: {SUPPORTED_APIS}"
         )
 
     return clients
+
+
+def construct_launcher(
+    wait_for: str,
+    model: str,
+    clients: List[LLMClient],
+    additional_sampling_params: Dict[str, Any],
+) -> RequestsLauncher:
+    """Construct RequestsLauncher that will send requests with a specific pattern.
+
+    Args:
+        wait_for: The name of pattern. WaitForAll launcher
+        model: The name of the model to query.
+        clients: The list of LLMClients.
+        additional_sampling_params: Additional sampling parameters to send with the request.
+            For more information see the LLM APIs documentation for the completions
+
+    Returns:
+        The constructed RequesstLauncher
+
+    """
+    if wait_for == "all":
+        return WaitForAllLauncher(model, clients, additional_sampling_params)
+    elif wait_for == "any":
+        return WaitForAnyLauncher(model, clients, additional_sampling_params)
+    else:
+        raise ValueError(f"Wrong type for 'wait_for' option: {wait_for}")

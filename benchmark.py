@@ -11,27 +11,16 @@ import pandas as pd
 import ray
 
 from llmperf import common_metrics
-from llmperf.common import SUPPORTED_APIS, construct_clients
+from llmperf.common import SUPPORTED_APIS, construct_clients, construct_launcher
 
 from llmperf.datasets import randomly_sample_prompt
 
-from llmperf.launcher.wait_for_all import WaitForAllLauncher
-from llmperf.launcher.wait_for_any import WaitForAnyLauncher
 from llmperf.utils import (
     LLMPerfResults,
     sample_random_positive_int,
 )
 
 from transformers import AutoTokenizer
-
-
-def construct_launcher(wait_for, model, clients, additional_sampling_params):
-    if wait_for == "all":
-        return WaitForAllLauncher(model, clients, additional_sampling_params)
-    elif wait_for == "any":
-        return WaitForAnyLauncher(model, clients, additional_sampling_params)
-    else:
-        raise ValueError(f"Wrong type for 'wait_for' option: {wait_for}")
 
 
 def get_token_throughput_latencies(
@@ -43,7 +32,7 @@ def get_token_throughput_latencies(
     stddev_output_tokens: int,
     additional_sampling_params: Optional[Dict[str, Any]] = None,
     num_concurrent_requests: int = 1,
-    wait_for: str = all,
+    wait_for: str = "all",
     max_num_completed_requests: int = 500,
     test_timeout_s=90,
     llm_api="openai",
@@ -236,7 +225,7 @@ def metrics_summary(metrics: List[Dict[str, Any]], e2e_latency: int) -> Dict[str
     return ret
 
 
-def run_token_benchmark(
+def run_benchmark(
     llm_api: str,
     model: str,
     dataset: str,
@@ -415,7 +404,7 @@ args.add_argument(
 args.add_argument(
     "--llm-api",
     type=str,
-    default="openai",
+    default="furiosa",
     help=(
         f"The name of the llm api to use. Can select from {SUPPORTED_APIS}"
         " (default: %(default)s)"
@@ -452,7 +441,7 @@ if __name__ == "__main__":
             key, value = item.split("=")
             user_metadata[key] = value
 
-    run_token_benchmark(
+    run_benchmark(
         llm_api=args.llm_api,
         model=args.model,
         dataset=args.dataset,
