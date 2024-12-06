@@ -10,6 +10,8 @@ import ray
 from ray.runtime_env import RuntimeEnv
 
 
+FURIOSA_AI_DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
+
 @ray.remote
 class FuriosaLLMClient(LLMClient):
     """Client for FuriosaAI LLM Completion API."""
@@ -33,9 +35,10 @@ class FuriosaLLMClient(LLMClient):
         os.environ["OPENAI_API_BASE"] = address
         os.environ["OPENAI_API_KEY"] = key
 
-        # Use greedy search
+        # Use greedy search as default
         if "temperature" not in request_config.sampling_params:
             request_config.sampling_params["temperature"] = 0.0
+        request_config.system_prompt = FURIOSA_AI_DEFAULT_SYSTEM_PROMPT 
 
         actor = OpenAIChatCompletionsClient.options(
             runtime_env=RuntimeEnv(env_vars=dict(os.environ))

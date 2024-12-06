@@ -22,16 +22,13 @@ class WaitForAnyLauncher(RequestsLauncher):
         pbar = tqdm(total=len(prompts))
         start_time = time.monotonic()
 
-        for i, (prompt, num_output_tokens) in enumerate(
-            zip(prompts, num_output_tokens_list)
-        ):
+        for (prompt, num_output_tokens) in zip(prompts, num_output_tokens_list):
             default_sampling_params = {"max_tokens": num_output_tokens}
             default_sampling_params.update(self._additional_sampling_params)
             request_config = RequestConfig(
                 model=self._model,
                 prompt=prompt,
                 sampling_params=default_sampling_params,
-                sleep=i,
             )
             # Do not care about is there any idle actor.
             # If there is no idle actor, it will be added at pending request

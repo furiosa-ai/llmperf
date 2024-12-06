@@ -11,10 +11,6 @@ from llmperf.models import RequestConfig
 from llmperf import common_metrics
 
 
-# Copy from AA's sample code
-OPENAI_SYSTEM_MESSAGE_API = "You are a helpful assistant."
-
-
 @ray.remote
 class OpenAIChatCompletionsClient(LLMClient):
     """Client for OpenAI Chat Completions API."""
@@ -25,9 +21,10 @@ class OpenAIChatCompletionsClient(LLMClient):
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         prompt = request_config.prompt
         prompt, prompt_len = prompt
+        system_prompt = request_config.system_prompt
 
         message = [
-            {"role": "system", "content": OPENAI_SYSTEM_MESSAGE_API},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ]
         model = request_config.model
