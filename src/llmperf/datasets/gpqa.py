@@ -71,12 +71,4 @@ def randomly_sample_gpqa_prompt(
     while num_prompt_tokens < get_token_len(prompt):
         prompt = random.choice(prompts)
 
-    # padding
-    # pad_token_num = 0
-    # remaining_prompt_tokens = num_prompt_tokens - get_token_len(prompt)
-    # while remaining_prompt_tokens > 0:
-    #     pad_token_num += 1
-    #     remaining_prompt_tokens -= get_token_len(tokenizer.pad_token * pad_token_num)
-    # prompt += tokenizer.pad_token * (pad_token_num - 1)
-
     return [prompt, get_token_len(prompt)]
