@@ -6,6 +6,11 @@ from llmperf.models import RequestConfig
 
 
 class WaitForAnyLauncher(RequestsLauncher):
+    """RequestsLauncher that waits for any sended request before send a next request.
+
+    The WaitForAny launcher sends a next request when any of requests sent are completed.
+    It keeps the number of concurrently processing requests at n.
+    """
 
     def launch(
         self,
