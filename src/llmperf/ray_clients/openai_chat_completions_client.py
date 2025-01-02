@@ -52,6 +52,7 @@ class OpenAIChatCompletionsClient(LLMClient):
 
         metrics[common_metrics.ERROR_CODE] = None
         metrics[common_metrics.ERROR_MSG] = ""
+        metrics[common_metrics.GEN_TEXT] = ""
 
         address = os.environ.get("OPENAI_API_BASE")
         if not address:
@@ -135,5 +136,6 @@ class OpenAIChatCompletionsClient(LLMClient):
         metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
         metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
         metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
+        metrics[common_metrics.GEN_TEXT] = generated_text
 
-        return metrics, generated_text, request_config
+        return metrics, request_config

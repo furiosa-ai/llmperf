@@ -117,7 +117,7 @@ def get_token_throughput_latencies(
 
     # collect results
     metrics = []
-    for metric, _, _ in completed_requests:
+    for metric, _ in completed_requests:
         metrics.append(metric)
 
     print(
