@@ -108,6 +108,7 @@ class VertexAIClient(LLMClient):
         metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
         metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
         metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
+        metrics[common_metrics.GEN_TEXT] = generated_text
 
         return metrics, generated_text, request_config
 

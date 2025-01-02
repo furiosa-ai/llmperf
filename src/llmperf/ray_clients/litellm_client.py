@@ -60,6 +60,7 @@ class LiteLLMClient(LLMClient):
 
         metrics[common_metrics.ERROR_CODE] = None
         metrics[common_metrics.ERROR_MSG] = ""
+        metrics[common_metrics.GEN_TEXT] = ""
 
         try:
             start_time = time.monotonic()
@@ -100,4 +101,6 @@ class LiteLLMClient(LLMClient):
         metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
         metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
         metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
-        return metrics, generated_text, request_config
+        metrics[common_metrics.GEN_TEXT] = generated_text
+
+        return metrics, request_config
