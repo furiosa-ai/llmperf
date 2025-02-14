@@ -449,7 +449,7 @@ if __name__ == "__main__":
     user_metadata = {}
     if args.metadata:
         for item in args.metadata.split(","):
-            key, value = item.split("=")
+            key, value = item.split("=", 1)
             user_metadata[key] = value
 
     run_token_benchmark(
