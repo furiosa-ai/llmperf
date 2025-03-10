@@ -45,6 +45,7 @@ def get_token_throughput_latencies(
     num_concurrent_requests: int = 1,
     wait_for: str = all,
     max_num_completed_requests: int = 500,
+    use_fixed_inputs: bool = True,
     test_timeout_s=90,
     llm_api="openai",
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
@@ -75,7 +76,8 @@ def get_token_throughput_latencies(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    get_token_len = lambda text: len(tokenizer.encode(text, add_special_tokens=False))
+    def get_token_len(text):
+        return len(tokenizer.encode(text, add_special_tokens=False))
 
     if not additional_sampling_params:
         additional_sampling_params = {}
@@ -92,21 +94,42 @@ def get_token_throughput_latencies(
     # prepare prompts
     num_output_tokens_list = []
     prompts = []
-    for _ in range(max_num_completed_requests):
-        num_output_tokens = sample_random_positive_int(
-            mean_output_tokens, stddev_output_tokens
+    use_same_prompt_for_all = (
+        use_fixed_inputs
+        and stddev_input_tokens == 0
+        and stddev_output_tokens == 0
+    )
+    if use_same_prompt_for_all:
+        print("Input mode: use same prompt for all requests.")
+        num_output_tokens = mean_output_tokens
+        prompt = randomly_sample_prompt(
+            dataset,
+            prompt_tokens_mean=mean_input_tokens,
+            prompt_tokens_stddev=stddev_input_tokens,
+            expect_output_tokens=num_output_tokens,
+            get_token_len=get_token_len,
+            tokenizer=tokenizer,
         )
-        num_output_tokens_list.append(num_output_tokens)
-
-        prompts.append(
-            randomly_sample_prompt(
-                dataset,
-                prompt_tokens_mean=mean_input_tokens,
-                prompt_tokens_stddev=stddev_input_tokens,
-                expect_output_tokens=num_output_tokens,
-                get_token_len=get_token_len,
+        num_output_tokens_list = [num_output_tokens] * max_num_completed_requests
+        prompts = [prompt] * max_num_completed_requests
+    else:
+        print("Input mode: randomly generate prompts for each request; this may take a while.")
+        for _ in range(max_num_completed_requests):
+            num_output_tokens = sample_random_positive_int(
+                mean_output_tokens, stddev_output_tokens
             )
-        )
+            num_output_tokens_list.append(num_output_tokens)
+
+            prompts.append(
+                randomly_sample_prompt(
+                    dataset,
+                    prompt_tokens_mean=mean_input_tokens,
+                    prompt_tokens_stddev=stddev_input_tokens,
+                    expect_output_tokens=num_output_tokens,
+                    get_token_len=get_token_len,
+                    tokenizer=tokenizer,
+                )
+            )
 
     # launch
     completed_requests, e2e_latency = req_launcher.launch(
@@ -248,6 +271,7 @@ def run_token_benchmark(
     stddev_input_tokens: int,
     mean_output_tokens: int,
     stddev_output_tokens: int,
+    use_fixed_inputs: bool,
     additional_sampling_params: str,
     results_dir: str,
     user_metadata: Dict[str, Any],
@@ -287,6 +311,7 @@ def run_token_benchmark(
         mean_output_tokens=mean_output_tokens,
         stddev_output_tokens=stddev_output_tokens,
         num_concurrent_requests=num_concurrent_requests,
+        use_fixed_inputs=use_fixed_inputs,
         wait_for=wait_for,
         additional_sampling_params=json.loads(additional_sampling_params),
     )
@@ -431,6 +456,16 @@ args.add_argument(
     ),
 )
 args.add_argument(
+    "--no-fixed-inputs",
+    action="store_false",
+    dest="use_fixed_inputs",
+    default=True,
+    help=(
+        "When disabled, always generates random prompts for each request to better simulate real-world usage patterns, though initialization may take longer. "
+        "By default, if possible (all `--stddev-*-tokens` parameters to zero), the same prompt is used for all requests."
+    ),
+)
+args.add_argument(
     "--metadata",
     type=str,
     default="",
@@ -463,6 +498,7 @@ if __name__ == "__main__":
         mean_output_tokens=args.mean_output_tokens,
         stddev_output_tokens=args.stddev_output_tokens,
         num_concurrent_requests=args.num_concurrent_requests,
+        use_fixed_inputs=args.use_fixed_inputs,
         wait_for=args.wait_for,
         additional_sampling_params=args.additional_sampling_params,
         results_dir=args.results_dir,

@@ -1,7 +1,7 @@
 import math
 import pathlib
 import random
-from typing import Tuple, Callable
+from typing import Any, Tuple, Callable
 
 from llmperf.utils import sample_random_positive_int
 
@@ -11,6 +11,7 @@ def randomly_sample_sonnet_lines_prompt(
     prompt_tokens_mean: int = 550,
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
+    tokneizer: Any = None,
 ) -> Tuple[str, int]:
     """Generate a prompt that randomly samples lines from a the shakespeare sonnet at sonnet.txt.
 

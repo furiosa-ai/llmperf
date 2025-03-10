@@ -1,7 +1,7 @@
 import csv
 import random
 import re
-from typing import Tuple, Callable
+from typing import Any, Tuple, Callable
 
 import sys
 
@@ -32,6 +32,7 @@ def randomly_sample_gpqa_prompt(
     prompt_tokens_mean: int = 550,
     prompt_tokens_stddev: int = 250,
     expect_output_tokens: int = 150,
+    tokenizer: Any = None,
 ) -> Tuple[str, int]:
     prompts = []
     # FIXME: Use gpqa_other dataset
