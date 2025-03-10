@@ -26,6 +26,7 @@ class OpenAICompletionsClient(LLMClient):
         body = {
             "model": model,
             "prompt": [prompt],
+            "temperature": 0.0,
             "stream": True,
         }
         sampling_params = request_config.sampling_params
