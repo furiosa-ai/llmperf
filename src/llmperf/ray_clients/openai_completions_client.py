@@ -67,7 +67,7 @@ class OpenAICompletionsClient(LLMClient):
                 address,
                 json=body,
                 stream=True,
-                timeout=180,
+                timeout=3600,
                 headers=headers,
             ) as response:
                 if response.status_code != 200:
