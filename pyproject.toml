@@ -20,7 +20,12 @@ dependencies = ["pydantic>=2.5",
                 "transformers",
                 "tqdm",
                 "boto3",
-                "google-cloud-aiplatform"]
+                "google-cloud-aiplatform",
+                
+                # to pin numpy version
+                "openai<1.68",
+                "numpy~=1.24",
+                ]
 
 
 [project.optional-dependencies]
